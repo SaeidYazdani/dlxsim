@@ -887,8 +887,8 @@ Simulate(machPtr, interp, singleStep)
     int i, result;
     char *errMsg, msg[20];
     int errorValue;
-	bool branchInstr = false;
-	bool branchTaken = false;
+	int branchInstr = 0;
+	int branchTaken = 0;
 
     /*
      * Can't continue from an addressing error on the program counter.
@@ -1038,11 +1038,11 @@ Simulate(machPtr, interp, singleStep)
 
 	    case OP_BEQZ:
 	      CheckS1 Check
-		  branchInstr = true;
+		  branchInstr = 1;
 	      if (machPtr->regs[wordPtr->rs1] == 0) {
 		pc = machPtr->regs[NEXT_PC_REG] + ADDR_TO_INDEX(wordPtr->extra);
 		machPtr->branchYes++;
-		branchTaken = true
+		branchTaken = 1
 	      }
 	      else machPtr->branchNo++;
 	      machPtr->branchSerial = machPtr->insCount;
@@ -1050,11 +1050,11 @@ Simulate(machPtr, interp, singleStep)
 	      break;
 
 	    case OP_BFPF:
-		  branchInstr = true;
+		  branchInstr = 1;
 	      if (!(machPtr->FPstatusReg)) {
 		pc = machPtr->regs[NEXT_PC_REG] + ADDR_TO_INDEX(wordPtr->extra);
 		machPtr->branchYes++;
-		branchTaken = true
+		branchTaken = 1
 	      }
 	      else machPtr->branchNo++;
 	      machPtr->branchSerial = machPtr->insCount;
@@ -1062,11 +1062,11 @@ Simulate(machPtr, interp, singleStep)
 	      break;
 
 	    case OP_BFPT:
-		  branchInstr = true;
+		  branchInstr = 1;
 	      if (machPtr->FPstatusReg) {
 		pc = machPtr->regs[NEXT_PC_REG] + ADDR_TO_INDEX(wordPtr->extra);
 		machPtr->branchYes++;
-		branchTaken = true
+		branchTaken = 1
 	      }
 	      else machPtr->branchNo++;
 	      machPtr->branchSerial = machPtr->insCount;
@@ -1075,11 +1075,11 @@ Simulate(machPtr, interp, singleStep)
 
 	    case OP_BNEZ:
 	      CheckS1 Check
-		  branchInstr = true;
+		  branchInstr = 1;
 	      if (machPtr->regs[wordPtr->rs1] != 0) {
 		pc = machPtr->regs[NEXT_PC_REG] + ADDR_TO_INDEX(wordPtr->extra);
 		machPtr->branchYes++;
-		branchTaken = true
+		branchTaken = 1;
 	      }
 	      else machPtr->branchNo++;
 	      machPtr->branchSerial = machPtr->insCount;
@@ -2092,7 +2092,7 @@ Simulate(machPtr, interp, singleStep)
 	machPtr->cycleCount++;
 	
 	//The instruction that was executed was a branch
-	if(branchInstr == true)
+	if(branchInstr == 1)
 	{
 		//Flushing the pipeline adds 2 stall cycles
 		if(g_handleBranch == BRANCH_FLUSH)
@@ -2103,7 +2103,7 @@ Simulate(machPtr, interp, singleStep)
 		//Predicting not taken adds 2 stall cycles if taken, and 0 if not taken
 		else if(g_handleBranch == BRANCH_PREDNOTTAKEN)
 		{
-			if(branchTaken == true)
+			if(branchTaken == 1)
 			{
 				machPtr->cycleCount += 2;
 				machPtr->branchStalls += 2;
