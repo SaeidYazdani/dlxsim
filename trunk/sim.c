@@ -2104,13 +2104,13 @@ Simulate(machPtr, interp, singleStep)
 	//The instruction that was executed was a branch
 	if(branchInstr == 1)
 	{
-		//Flushing the pipeline adds 2 stall cycles
+		//Flushing the pipeline adds 1 stall cycles
 		if(g_handleBranch == BRANCH_FLUSH)
 		{
 			machPtr->cycleCount += 1;
 			machPtr->branchStalls += 1;
 		}
-		//Predicting not taken adds 2 stall cycles if taken, and 0 if not taken
+		//Predicting not taken adds 1 stall cycles if taken, and 0 if not taken
 		else if(g_handleBranch == BRANCH_NOTTAKEN)
 		{
 			if(branchTaken == 1)
@@ -2161,8 +2161,7 @@ Simulate(machPtr, interp, singleStep)
 		machPtr->regs[PC_REG] = machPtr->regs[NEXT_PC_REG];
 		machPtr->regs[NEXT_PC_REG] = pc;
 	}
-	//No delay slot here, so move to the next PC target without executing
-	//the instruction right after the branch
+	//No delay slot here
 	else
 	{
 		machPtr->regs[PC_REG] = pc;
