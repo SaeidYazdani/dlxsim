@@ -887,6 +887,8 @@ Simulate(machPtr, interp, singleStep)
     int i, result;
     char *errMsg, msg[20];
     int errorValue;
+	bool branchInstr = false;
+	bool branchTaken = false;
 
     /*
      * Can't continue from an addressing error on the program counter.
@@ -1036,9 +1038,11 @@ Simulate(machPtr, interp, singleStep)
 
 	    case OP_BEQZ:
 	      CheckS1 Check
+		  branchInstr = true;
 	      if (machPtr->regs[wordPtr->rs1] == 0) {
 		pc = machPtr->regs[NEXT_PC_REG] + ADDR_TO_INDEX(wordPtr->extra);
 		machPtr->branchYes++;
+		branchTaken = true
 	      }
 	      else machPtr->branchNo++;
 	      machPtr->branchSerial = machPtr->insCount;
@@ -1046,9 +1050,11 @@ Simulate(machPtr, interp, singleStep)
 	      break;
 
 	    case OP_BFPF:
+		  branchInstr = true;
 	      if (!(machPtr->FPstatusReg)) {
 		pc = machPtr->regs[NEXT_PC_REG] + ADDR_TO_INDEX(wordPtr->extra);
 		machPtr->branchYes++;
+		branchTaken = true
 	      }
 	      else machPtr->branchNo++;
 	      machPtr->branchSerial = machPtr->insCount;
@@ -1056,9 +1062,11 @@ Simulate(machPtr, interp, singleStep)
 	      break;
 
 	    case OP_BFPT:
+		  branchInstr = true;
 	      if (machPtr->FPstatusReg) {
 		pc = machPtr->regs[NEXT_PC_REG] + ADDR_TO_INDEX(wordPtr->extra);
 		machPtr->branchYes++;
+		branchTaken = true
 	      }
 	      else machPtr->branchNo++;
 	      machPtr->branchSerial = machPtr->insCount;
@@ -1067,9 +1075,11 @@ Simulate(machPtr, interp, singleStep)
 
 	    case OP_BNEZ:
 	      CheckS1 Check
+		  branchInstr = true;
 	      if (machPtr->regs[wordPtr->rs1] != 0) {
 		pc = machPtr->regs[NEXT_PC_REG] + ADDR_TO_INDEX(wordPtr->extra);
 		machPtr->branchYes++;
+		branchTaken = true
 	      }
 	      else machPtr->branchNo++;
 	      machPtr->branchSerial = machPtr->insCount;
@@ -2080,6 +2090,35 @@ Simulate(machPtr, interp, singleStep)
 	 */
 	
 	machPtr->cycleCount++;
+	
+	//The instruction that was executed was a branch
+	if(branchInstr == true)
+	{
+		//Flushing the pipeline adds 2 stall cycles
+		if(g_handleBranch == BRANCH_FLUSH)
+		{
+			machPtr->cycleCount += 2;
+			machPtr->branchStalls += 2;
+		}
+		//Predicting not taken adds 2 stall cycles if taken, and 0 if not taken
+		else if(g_handleBranch == BRANCH_PREDNOTTAKEN)
+		{
+			if(branchTaken == true)
+			{
+				machPtr->cycleCount += 2;
+				machPtr->branchStalls += 2;
+			}
+		}
+		//Ideal branch handling adds 0 stall cycles
+		else if(g_handleBranch == BRANCH_IDEAL)
+		{
+		}
+		//BTB dynamic prediction
+		else
+		{
+		}
+	}
+			
 	if (machPtr->checkFP && machPtr->cycleCount >= machPtr->checkFP)
 	  FPwriteBack (machPtr);
 	/* re-zero the cycle count periodically to avoid wrap around probs */
@@ -2107,9 +2146,17 @@ Simulate(machPtr, interp, singleStep)
 	/*
 	 * Advance program counters.
 	 */
-    
-	machPtr->regs[PC_REG] = machPtr->regs[NEXT_PC_REG];
-	machPtr->regs[NEXT_PC_REG] = pc;
+	if(g_handleBranch == BRANCH_DELAY)
+	{
+		machPtr->regs[PC_REG] = machPtr->regs[NEXT_PC_REG];
+		machPtr->regs[NEXT_PC_REG] = pc;
+	}
+	//No delay slot here, so move to the next PC target without executing
+	//the instruction right after the branch
+	else
+	{
+		machPtr->regs[PC_REG] = pc;
+	}
 
 	/*
 	 * Check flags for special actions to perform after the instruction.
