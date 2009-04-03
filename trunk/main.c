@@ -39,12 +39,14 @@ static char rcsid[] = "$Header: /user1/ouster/mipsim/RCS/main.c,v 1.7 89/11/05 1
 static Tcl_Interp *interp;
 static DLX *machPtr;
 
+int g_handleBranch = BRANCH_DELAY;
+
 /*
  * Forward references to procedures declared later in this file:
  */
 
 static void Interrupt();
-
+
 /*
  *----------------------------------------------------------------------
  *
@@ -74,77 +76,107 @@ char **argv;
     int mul_latency = FP_MUL_LATENCY;
     int div_latency = FP_DIV_LATENCY;
     int mem_size = MEMSIZE;
-    short branch_handling = -1; /* 0 -> flushing
-				1 -> pred-not-taken
-				2 -> dynamic prediction
-				3 -> ideal
-				anything else -> error
-			     */
+
     interp = Tcl_CreateInterp();
 
 	/* parse the command line */
 
     while (argv++, --argc) {
-	if (*(p = *argv) != '-') {
-usageError:
-	    fprintf(stderr, "usage : %s [-al#] [-au#] [-dl#] [-du#] [-ml#] [-mu#] [-ms#] [-flushing|-pred-not-taken|-dyn-branch-pred|-ideal]\n", command);
-	    exit(0);
-	}
-	switch (*(p+1)) {
-	case 'a' :
-	    switch (*(p+2)) {
-	    case 'l' :
-		add_latency = atoi(p+3);
-		break;
-	    case 'u' :
-		add_units = atoi(p+3);
-		break;
-	    default :
-		goto usageError;
-		break;
-	    }
-	    break;
-	case 'd' :
-	    switch (*(p+2)) {
-	    case 'l' :
-		div_latency = atoi(p+3);
-		break;
-	    case 'u' :
-		div_units = atoi(p+3);
-		break;
-	    default :
-		goto usageError;
-		break;
-	    }
-	    break;
-	case 'm' :
-	    switch (*(p+2)) {
-	    case 'l' :
-		mul_latency = atoi(p+3);
-		break;
-	    case 's' :
-		mem_size = (atoi(p+3) + 3) >> 2;
-		break;
-	    case 'u' :
-		mul_units = atoi(p+3);
-		break;
-	    default :
-		goto usageError;
-		break;
-	    }
-	    break;
-	case 'f':
-	    char * option = "flushing";
-            if (!strcmp(p,option))
-		goto usageError;
-	    else
-		branch_handling = 0;
-	    break;
-
-	default :
-	    goto usageError;
-	    break;
-	}
+		if (*(p = *argv) != '-') {
+	usageError:
+			fprintf(stderr, "usage : %s [-al#] [-au#] [-dl#] [-du#] [-ml#] [-mu#] [-ms#]\n", command);
+			exit(0);
+		}
+		if(strcmp((p+1), "flushing") == 0)
+		{
+			if(g_handleBranch != 0)
+			{
+				fprintf(stderr, "Do not set more than 1 of the following flags: -flushing, -pred-not-taken, -dyn-branch-pred, -ideal.\n");
+				exit(0);
+			}
+			
+			g_handleBranch = BRANCH_FLUSH;
+		}
+		else if(strcmp((p+1), "pred-not-taken") == 0)
+		{
+			if(g_handleBranch != 0)
+			{
+				fprintf(stderr, "Do not set more than 1 of the following flags: -flushing, -pred-not-taken, -dyn-branch-pred, -ideal.\n");
+				exit(0);
+			}
+			
+			g_handleBranch = BRANCH_NOTTAKEN;
+		}
+		else if(strcmp((p+1), "dyn-branch-pred") == 0)
+		{
+			if(g_handleBranch != 0)
+			{
+				fprintf(stderr, "Do not set more than 1 of the following flags: -flushing, -pred-not-taken, -dyn-branch-pred, -ideal.\n");
+				exit(0);
+			}
+			
+			g_handleBranch = BRANCH_BTB;
+		}
+		else if(strcmp((p+1), "ideal") == 0)
+		{
+			if(g_handleBranch != 0)
+			{
+				fprintf(stderr, "Do not set more than 1 of the following flags: -flushing, -pred-not-taken, -dyn-branch-pred, -ideal.\n");
+				exit(0);
+			}
+			
+			g_handleBranch = BRANCH_IDEAL;
+		}
+		else
+		{
+			switch (*(p+1)) {
+			case 'a' :
+				switch (*(p+2)) {
+				case 'l' :
+				add_latency = atoi(p+3);
+				break;
+				case 'u' :
+				add_units = atoi(p+3);
+				break;
+				default :
+				goto usageError;
+				break;
+				}
+				break;
+			case 'd' :
+				switch (*(p+2)) {
+				case 'l' :
+				div_latency = atoi(p+3);
+				break;
+				case 'u' :
+				div_units = atoi(p+3);
+				break;
+				default :
+				goto usageError;
+				break;
+				}
+				break;
+			case 'm' :
+				switch (*(p+2)) {
+				case 'l' :
+				mul_latency = atoi(p+3);
+				break;
+				case 's' :
+				mem_size = (atoi(p+3) + 3) >> 2;
+				break;
+				case 'u' :
+				mul_units = atoi(p+3);
+				break;
+				default :
+				goto usageError;
+				break;
+				}
+				break;
+			default :
+				goto usageError;
+				break;
+			}
+		}
     }
 
     if (mem_size < 1) {
