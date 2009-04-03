@@ -84,7 +84,7 @@ char **argv;
     while (argv++, --argc) {
 		if (*(p = *argv) != '-') {
 	usageError:
-			fprintf(stderr, "usage : %s [-al#] [-au#] [-dl#] [-du#] [-ml#] [-mu#] [-ms#]\n", command);
+			fprintf(stderr, "usage : %s [-al#] [-au#] [-dl#] [-du#] [-ml#] [-mu#] [-ms#] [-flushing,-pred-not-taken,-dyn-branch-pred,-ideal]\n", command);
 			exit(0);
 		}
 		if(strcmp((p+1), "flushing") == 0)

@@ -2099,16 +2099,16 @@ Simulate(machPtr, interp, singleStep)
 		//Flushing the pipeline adds 2 stall cycles
 		if(g_handleBranch == BRANCH_FLUSH)
 		{
-			machPtr->cycleCount += 2;
-			machPtr->branchStalls += 2;
+			machPtr->cycleCount += 1;
+			machPtr->branchStalls += 1;
 		}
 		//Predicting not taken adds 2 stall cycles if taken, and 0 if not taken
 		else if(g_handleBranch == BRANCH_NOTTAKEN)
 		{
 			if(branchTaken == 1)
 			{
-				machPtr->cycleCount += 2;
-				machPtr->branchStalls += 2;
+				machPtr->cycleCount += 1;
+				machPtr->branchStalls += 1;
 			}
 		}
 		//Ideal branch handling adds 0 stall cycles
