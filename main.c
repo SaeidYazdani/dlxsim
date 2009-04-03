@@ -74,7 +74,12 @@ char **argv;
     int mul_latency = FP_MUL_LATENCY;
     int div_latency = FP_DIV_LATENCY;
     int mem_size = MEMSIZE;
-
+    short branch_handling = -1; /* 0 -> flushing
+				1 -> pred-not-taken
+				2 -> dynamic prediction
+				3 -> ideal
+				anything else -> error
+			     */
     interp = Tcl_CreateInterp();
 
 	/* parse the command line */
@@ -82,7 +87,7 @@ char **argv;
     while (argv++, --argc) {
 	if (*(p = *argv) != '-') {
 usageError:
-	    fprintf(stderr, "usage : %s [-al#] [-au#] [-dl#] [-du#] [-ml#] [-mu#] [-ms#]\n", command);
+	    fprintf(stderr, "usage : %s [-al#] [-au#] [-dl#] [-du#] [-ml#] [-mu#] [-ms#] [-flushing|-pred-not-taken|-dyn-branch-pred|-ideal]\n", command);
 	    exit(0);
 	}
 	switch (*(p+1)) {
@@ -128,6 +133,14 @@ usageError:
 		break;
 	    }
 	    break;
+	case 'f':
+	    char * option = "flushing";
+            if (!strcmp(p,option))
+		goto usageError;
+	    else
+		branch_handling = 0;
+	    break;
+
 	default :
 	    goto usageError;
 	    break;
