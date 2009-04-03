@@ -956,7 +956,16 @@ Simulate(machPtr, interp, singleStep)
 	  fprintf(machPtr->refTraceFile, "2 %x\n", INDEX_TO_ADDR(pc));
 	wordPtr = &machPtr->memPtr[pc];
 	last_pc = pc;
-	pc = machPtr->regs[NEXT_PC_REG]+1;
+		
+	if(g_handleBranch == BRANCH_DELAY)
+	{
+		pc = machPtr->regs[NEXT_PC_REG] + 1;
+	}
+	else
+	{
+		machPtr->regs[NEXT_PC_REG] = machPtr->regs[PC_REG];
+		pc = machPtr->regs[PC_REG] + 1;
+	}
 
 	/*
 	 * Handle breaks on the instruction, if this isn't the first
@@ -2158,7 +2167,6 @@ Simulate(machPtr, interp, singleStep)
 	else
 	{
 		machPtr->regs[PC_REG] = pc;
-		machPtr->regs[NEXT_PC_REG] = pc;
 	}
 
 	/*
