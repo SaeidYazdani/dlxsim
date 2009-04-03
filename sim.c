@@ -2158,6 +2158,7 @@ Simulate(machPtr, interp, singleStep)
 	else
 	{
 		machPtr->regs[PC_REG] = pc;
+		machPtr->regs[NEXT_PC_REG] = pc;
 	}
 
 	/*
