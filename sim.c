@@ -28,6 +28,8 @@ static char rcsid[] = "$Header: /user1/ouster/mipsim/RCS/sim.c,v 1.18 89/11/20 1
 #include "dlx.h"
 #include "sym.h"
 
+extern int g_handleBranch;
+
 /*
  * The table below is used to translate bits 31:26 of the instruction
  * into a value suitable for the "opCode" field of a MemWord structure,
@@ -1042,7 +1044,7 @@ Simulate(machPtr, interp, singleStep)
 	      if (machPtr->regs[wordPtr->rs1] == 0) {
 		pc = machPtr->regs[NEXT_PC_REG] + ADDR_TO_INDEX(wordPtr->extra);
 		machPtr->branchYes++;
-		branchTaken = 1
+		branchTaken = 1;
 	      }
 	      else machPtr->branchNo++;
 	      machPtr->branchSerial = machPtr->insCount;
@@ -1054,7 +1056,7 @@ Simulate(machPtr, interp, singleStep)
 	      if (!(machPtr->FPstatusReg)) {
 		pc = machPtr->regs[NEXT_PC_REG] + ADDR_TO_INDEX(wordPtr->extra);
 		machPtr->branchYes++;
-		branchTaken = 1
+		branchTaken = 1;
 	      }
 	      else machPtr->branchNo++;
 	      machPtr->branchSerial = machPtr->insCount;
@@ -1066,7 +1068,7 @@ Simulate(machPtr, interp, singleStep)
 	      if (machPtr->FPstatusReg) {
 		pc = machPtr->regs[NEXT_PC_REG] + ADDR_TO_INDEX(wordPtr->extra);
 		machPtr->branchYes++;
-		branchTaken = 1
+		branchTaken = 1;
 	      }
 	      else machPtr->branchNo++;
 	      machPtr->branchSerial = machPtr->insCount;
@@ -2101,7 +2103,7 @@ Simulate(machPtr, interp, singleStep)
 			machPtr->branchStalls += 2;
 		}
 		//Predicting not taken adds 2 stall cycles if taken, and 0 if not taken
-		else if(g_handleBranch == BRANCH_PREDNOTTAKEN)
+		else if(g_handleBranch == BRANCH_NOTTAKEN)
 		{
 			if(branchTaken == 1)
 			{
