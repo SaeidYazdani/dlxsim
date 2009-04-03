@@ -963,8 +963,7 @@ Simulate(machPtr, interp, singleStep)
 	}
 	else
 	{
-		machPtr->regs[NEXT_PC_REG] = machPtr->regs[PC_REG];
-		pc = machPtr->regs[PC_REG] + 1;
+		pc = machPtr->regs[NEXT_PC_REG] = machPtr->regs[PC_REG] + 1;
 	}
 
 	/*
