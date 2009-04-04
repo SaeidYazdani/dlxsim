@@ -376,7 +376,7 @@ Sim_DumpStats(machPtr, interp, argc, argv)
     if (doStalls) {
 	printf("Load Stalls = %d\n", machPtr->loadStalls);
 	printf("Floating Point Stalls = %d\n", machPtr->FPstalls);
-	printf("Branch Stalls = %d\n", machPtr->loadStalls);
+	printf("Branch Stalls = %d\n", machPtr->branchStalls);
     }
 
     if (doBranch) {
@@ -2133,70 +2133,98 @@ Simulate(machPtr, interp, singleStep)
             #define UNSURE_BRANCH_TAKEN 1
             #define UNSURE_BRANCH_NOT_TAKEN 2
             #define SURE_BRANCH_NOT_TAKEN 3
+			
+			struct BTBEntry {
+				int tag;
+				int target;
+				int status;
+			};
+			
+			/* 
+			* SURE_BRANCH_TAKEN -> take branch (sure)
+			* UNSURE_BRANCH_TAKEN -> take branch (unsure)
+			* UNSURE_BRANCH_NOT_TAKEN -> do not take branch (unsure)
+			* SURE_BRANCH_NOT_TAKEN -> do no take branch (sure) [DEFAULT]
+			*
+			* The index of the table is the lower 
+			* 2 bits of the program counter.
+			*/
+            static struct BTBEntry bt_table[(1 << BITS_IN_BTB_INDEX)] = (BTBEntry){-1, 0, 0}; 
+			
+            int index = (machPtr->regs[PC_REG] >> 2) & ((1 << BITS_IN_BTB_INDEX) - 1);
             
-            static int bt_table[(1 << BITS_IN_BTB_INDEX)] = {0}; /* SURE_BRANCH_TAKEN -> take branch (sure)
-                                                       * UNSURE_BRANCH_TAKEN -> take branch (unsure)
-                                                       * UNSURE_BRANCH_NOT_TAKEN -> do not take branch (unsure)
-                                                       * SURE_BRANCH_NOT_TAKEN -> do no take branch (sure) [DEFAULT]
-                                                       *
-                                                       * The index of the table is the lower 
-                                                       * 2 bits of the program counter.
-                                                       */
-            int index = (machPtr->regs[PC_REG] >> 2) & ((1 << BITS_IN_BTB_INDEX) - 1); // mask out everything except middle 
-            if (branchTaken == 1)
-            {
-                switch(bt_table[index])
-                {
-                    case SURE_BRANCH_TAKEN:
-                        break;
-                    case UNSURE_BRANCH_TAKEN:
-                        bt_table[index] = SURE_BRANCH_TAKEN; //go back to branch taken (sure) state
-                        //correct guess, so no stalls
-                        break;                        
-                    case UNSURE_BRANCH_NOT_TAKEN:
-                        bt_table[index] = SURE_BRANCH_TAKEN; /*previous branch was taken, so was this,
-                                                              * so we guess that the next branch will be 
-                                                              * taken for sure.
-                                                              */
-                        machPtr->cycleCount += 1; //guessed that we wouldn't take branch, pay penalty
-						machPtr->branchStalls += 1;
-                        break;                        
-                    case SURE_BRANCH_NOT_TAKEN:
-                        bt_table[index] = UNSURE_BRANCH_TAKEN; /* An anomaly, go to a unsure state */
-                        machPtr->cycleCount += 1; //guessed that we wouldn't take branch, pay penalty
-						machPtr->branchStalls += 1;
-                        break;                        
-                    default:
-                        sprintf(interp->result, "internal error: something wrong happened in dyanmic branch prediction. Blame Deva. \
-                                Debugging info:took branch, bad state = %d", bt_table[index]);
-                }
-            }
-            else //didn't take branch
-            {
-                switch(bt_table[index])
-                {
-                    case SURE_BRANCH_TAKEN:
-                        bt_table[index] = UNSURE_BRANCH_TAKEN; //may this was anomaly case
-                        machPtr->cycleCount += 1; //guessed that we would take branch, pay penalty
-						machPtr->branchStalls += 1;
-                        break;
-                    case UNSURE_BRANCH_TAKEN:
-                        bt_table[index] = SURE_BRANCH_NOT_TAKEN; //damn! two straight branch not takens
-                        machPtr->cycleCount += 1; //guessed that we would take branch, pay penalty
-						machPtr->branchStalls += 1;
-                        break;                        
-                    case UNSURE_BRANCH_NOT_TAKEN:
-                        bt_table[index] = SURE_BRANCH_NOT_TAKEN; /* go back to sure state */
-                        // no penalty since we guess right
-                        break;                        
-                    case SURE_BRANCH_NOT_TAKEN:
-                        //whatever, we thought this was gonna happen anyway
-                        break;
-                    default:
-                        sprintf(interp->result, "internal error: something wrong happened in dyanmic branch prediction. Blame Deva. \
-                                Debugging info:didn't take branch, bad state = %d", bt_table[index]);
-                }
-            }      
+			//Not in the BTB (Or different tag for given index), so insert new entry
+			if(bt_table[index].tag == -1 || bt_table[index].tag != (machPtr->regs[PC_REG] >> (BITS_IN_BTB_INDEX + 2)))
+			{
+				bt_table[index].tag = (machPtr->regs[PC_REG] >> (BITS_IN_BTB_INDEX + 2));
+				bt_table[index].target = pc;
+				
+				//Was taken, so need to stall 1 cycle and set prediction to unsure taken
+				if(branchTaken == 1)
+				{
+					machPtr->cycleCount += 1;
+					machPtr->branchStalls += 1;
+					bt_table[index].status = UNSURE_BRANCH_TAKEN;
+				}
+				//Was not taken, so need to set prediction to unsure not taken
+				else
+				{
+					bt_table[index].status = UNSURE_BRANCH_NOT_TAKEN;
+				}
+			}
+			else
+			{
+				//The predicted and resolved targets are not the same, needs stall and predicted target update
+				if(bt_table[index].target != pc)
+				{
+					machPtr->cycleCount += 1;
+					machPtr->branchStalls += 1;
+					bt_table[index].target = pc;
+				}
+				
+				//Branch was taken
+				if (branchTaken == 1)
+		        {
+		            switch(bt_table[index])
+		            {
+		                case SURE_BRANCH_TAKEN: //Assumed
+		                    break;
+		                case UNSURE_BRANCH_TAKEN:
+		                    bt_table[index] = SURE_BRANCH_TAKEN; //Assured
+		                    break;                        
+		                case UNSURE_BRANCH_NOT_TAKEN:
+		                    bt_table[index] = SURE_BRANCH_TAKEN;  //2 in a row -> switch
+		                    break;                        
+		                case SURE_BRANCH_NOT_TAKEN:
+		                    bt_table[index] = UNSURE_BRANCH_TAKEN; //Anomaly
+		                    break;                        
+		                default:
+		                    sprintf(interp->result, "internal error: something wrong happened in dyanmic branch prediction. Blame Deva. \
+		                            Debugging info:took branch, bad state = %d", bt_table[index]);
+		            }
+		        }
+				//Branch was not taken
+		        else
+		        {
+		            switch(bt_table[index])
+		            {
+		                case SURE_BRANCH_TAKEN:
+		                    bt_table[index] = UNSURE_BRANCH_TAKEN; //Anomaly
+		                    break;
+		                case UNSURE_BRANCH_TAKEN:
+		                    bt_table[index] = SURE_BRANCH_NOT_TAKEN; //2 in a row -> switch
+		                    break;                        
+		                case UNSURE_BRANCH_NOT_TAKEN:
+		                    bt_table[index] = SURE_BRANCH_NOT_TAKEN; //Assured
+		                    break;                        
+		                case SURE_BRANCH_NOT_TAKEN: //Assumed
+		                    break;
+		                default:
+		                    sprintf(interp->result, "internal error: something wrong happened in dyanmic branch prediction. Blame Deva. \
+		                            Debugging info:didn't take branch, bad state = %d", bt_table[index]);
+		            }
+		        }  
+			}
 		}
 	}
 			
