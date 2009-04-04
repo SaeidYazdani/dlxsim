@@ -892,8 +892,8 @@ Simulate(machPtr, interp, singleStep)
     int i, result;
     char *errMsg, msg[20];
     int errorValue;
-	int branchInstr = 0;
-	int branchTaken = 0;
+	int branchInstr;
+	int branchTaken;
 
     /*
      * Can't continue from an addressing error on the program counter.
@@ -931,6 +931,8 @@ Simulate(machPtr, interp, singleStep)
 
 	stalled = 0;
 	trapCaught = 0;
+	branchInstr = 0;
+	branchTaken = 0;
 
 	/* First handle a delayed laod */
 	if (lastLoad1 = machPtr->loadReg1) {
