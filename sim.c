@@ -376,6 +376,7 @@ Sim_DumpStats(machPtr, interp, argc, argv)
     if (doStalls) {
 	printf("Load Stalls = %d\n", machPtr->loadStalls);
 	printf("Floating Point Stalls = %d\n", machPtr->FPstalls);
+	printf("Branch Stalls = %d\n", machPtr->loadStalls);
     }
 
     if (doBranch) {
@@ -2123,87 +2124,79 @@ Simulate(machPtr, interp, singleStep)
 		//Ideal branch handling adds 0 stall cycles
 		else if(g_handleBranch == BRANCH_IDEAL)
 		{
-                    //do nothing
+			//do nothing
 		}
 		//BTB dynamic prediction
 		else
 		{
-                    #define BT_TABLE_SIZE 4 /*leave as 4 until after bug testing*/
-                    #define SURE_BRANCH_TAKEN 0
-                    #define UNSURE_BRANCH_TAKEN 1
-                    #define UNSURE_BRANCH_NOT_TAKEN 2
-                    #define SURE_BRANCH_NOT_TAKEN 3
-                    
-                    static int bt_table[BT_TABLE_SIZE] = {0}; /* SURE_BRANCH_TAKEN -> take branch (sure)
-                                                               * UNSURE_BRANCH_TAKEN -> take branch (unsure)
-                                                               * UNSURE_BRANCH_NOT_TAKEN -> do not take branch (unsure)
-                                                               * SURE_BRANCH_NOT_TAKEN -> do no take branch (sure)
-                                                               *
-                                                               * The index of the table is the lower 
-                                                               * 2 bits of the program counter.
-                                                               */
-                    int index = (machPtr->regs[PC_REG]>>2) & 0x2; // mask out everything except middle 
-                    if (branchTaken == 1)
-                    {
-                        switch(bt_table[index])
-                        {
-                            case SURE_BRANCH_TAKEN:
-                                break;
-                            case UNSURE_BRANCH_TAKEN:
-                                bt_table[index] = SURE_BRANCH_TAKEN; //go back to branch taken (sure) state
-                                //correct guess, so no stalls
-                                break;
-                                
-                            case UNSURE_BRANCH_NOT_TAKEN:
-                                bt_table[index] = SURE_BRANCH_TAKEN; /*previous branch was taken, so was this,
-                                                                      * so we guess that the next branch will be 
-                                                                      * taken for sure.
-                                                                      */
-                                machPtr->cycleCount += 1; //guessed that we wouldn't take branch, pay penalty
-				machPtr->branchStalls += 1;
-                                break;
-                                
-                            case SURE_BRANCH_NOT_TAKEN:
-                                bt_table[index] = UNSURE_BRANCH_TAKEN; /* An anomaly, go to a unsure state */
-                                machPtr->cycleCount += 1; //guessed that we wouldn't take branch, pay penalty
-				machPtr->branchStalls += 1;
-                                break;
-                                
-                            default:
-                                sprintf(interp->result, "internal error: something wrong happened in dyanmic branch prediction. Blame Deva. \
-                                        Debugging info:took branch, bad state = %d", bt_table[index]);
-                        }
-                    }
-                    else //didn't take branch
-                    {
-                        switch(bt_table[index])
-                        {
-                            case SURE_BRANCH_TAKEN:
-                                bt_table[index] = UNSURE_BRANCH_TAKEN; //may this was anomaly case
-                                machPtr->cycleCount += 1; //guessed that we would take branch, pay penalty
-				machPtr->branchStalls += 1;
-                                break;
-                            case UNSURE_BRANCH_TAKEN:
-                                bt_table[index] = SURE_BRANCH_NOT_TAKEN; //damn! two straight branch not takens
-                                machPtr->cycleCount += 1; //guessed that we would take branch, pay penalty
-				machPtr->branchStalls += 1;
-                                break;
-                                
-                            case UNSURE_BRANCH_NOT_TAKEN:
-                                bt_table[index] = SURE_BRANCH_NOT_TAKEN; /* go back to sure state */
-                                // no penalty since we guess right
-                                break;
-                                
-                            case SURE_BRANCH_NOT_TAKEN:
-                                //whatever, we thought this was gonna happen anyway
-                                break;
-                            default:
-                                sprintf(interp->result, "internal error: something wrong happened in dyanmic branch prediction. Blame Deva. \
-                                        Debugging info:didn't take branch, bad state = %d", bt_table[index]);
-                        }
-                    }
-                    
-                    
+            #define SURE_BRANCH_TAKEN 0
+            #define UNSURE_BRANCH_TAKEN 1
+            #define UNSURE_BRANCH_NOT_TAKEN 2
+            #define SURE_BRANCH_NOT_TAKEN 3
+            
+            static int bt_table[(1 << BITS_IN_BTB_INDEX)] = {0}; /* SURE_BRANCH_TAKEN -> take branch (sure)
+                                                       * UNSURE_BRANCH_TAKEN -> take branch (unsure)
+                                                       * UNSURE_BRANCH_NOT_TAKEN -> do not take branch (unsure)
+                                                       * SURE_BRANCH_NOT_TAKEN -> do no take branch (sure) [DEFAULT]
+                                                       *
+                                                       * The index of the table is the lower 
+                                                       * 2 bits of the program counter.
+                                                       */
+            int index = (machPtr->regs[PC_REG] >> 2) & ((1 << BITS_IN_BTB_INDEX) - 1); // mask out everything except middle 
+            if (branchTaken == 1)
+            {
+                switch(bt_table[index])
+                {
+                    case SURE_BRANCH_TAKEN:
+                        break;
+                    case UNSURE_BRANCH_TAKEN:
+                        bt_table[index] = SURE_BRANCH_TAKEN; //go back to branch taken (sure) state
+                        //correct guess, so no stalls
+                        break;                        
+                    case UNSURE_BRANCH_NOT_TAKEN:
+                        bt_table[index] = SURE_BRANCH_TAKEN; /*previous branch was taken, so was this,
+                                                              * so we guess that the next branch will be 
+                                                              * taken for sure.
+                                                              */
+                        machPtr->cycleCount += 1; //guessed that we wouldn't take branch, pay penalty
+						machPtr->branchStalls += 1;
+                        break;                        
+                    case SURE_BRANCH_NOT_TAKEN:
+                        bt_table[index] = UNSURE_BRANCH_TAKEN; /* An anomaly, go to a unsure state */
+                        machPtr->cycleCount += 1; //guessed that we wouldn't take branch, pay penalty
+						machPtr->branchStalls += 1;
+                        break;                        
+                    default:
+                        sprintf(interp->result, "internal error: something wrong happened in dyanmic branch prediction. Blame Deva. \
+                                Debugging info:took branch, bad state = %d", bt_table[index]);
+                }
+            }
+            else //didn't take branch
+            {
+                switch(bt_table[index])
+                {
+                    case SURE_BRANCH_TAKEN:
+                        bt_table[index] = UNSURE_BRANCH_TAKEN; //may this was anomaly case
+                        machPtr->cycleCount += 1; //guessed that we would take branch, pay penalty
+						machPtr->branchStalls += 1;
+                        break;
+                    case UNSURE_BRANCH_TAKEN:
+                        bt_table[index] = SURE_BRANCH_NOT_TAKEN; //damn! two straight branch not takens
+                        machPtr->cycleCount += 1; //guessed that we would take branch, pay penalty
+						machPtr->branchStalls += 1;
+                        break;                        
+                    case UNSURE_BRANCH_NOT_TAKEN:
+                        bt_table[index] = SURE_BRANCH_NOT_TAKEN; /* go back to sure state */
+                        // no penalty since we guess right
+                        break;                        
+                    case SURE_BRANCH_NOT_TAKEN:
+                        //whatever, we thought this was gonna happen anyway
+                        break;
+                    default:
+                        sprintf(interp->result, "internal error: something wrong happened in dyanmic branch prediction. Blame Deva. \
+                                Debugging info:didn't take branch, bad state = %d", bt_table[index]);
+                }
+            }      
 		}
 	}
 			
