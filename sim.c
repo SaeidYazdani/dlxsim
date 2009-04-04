@@ -27,6 +27,7 @@ static char rcsid[] = "$Header: /user1/ouster/mipsim/RCS/sim.c,v 1.18 89/11/20 1
 #include "asm.h"
 #include "dlx.h"
 #include "sym.h"
+#include "btb.h"
 
 extern int g_handleBranch;
 
@@ -2127,7 +2128,7 @@ Simulate(machPtr, interp, singleStep)
 		//BTB dynamic prediction
 		else
 		{
-                    #define BT_TABLE_SIZE 4
+                    #define BT_TABLE_SIZE 4 /*leave as 4 until after bug testing*/
                     #define SURE_BRANCH_TAKEN 0
                     #define UNSURE_BRANCH_TAKEN 1
                     #define UNSURE_BRANCH_NOT_TAKEN 2
@@ -2141,7 +2142,7 @@ Simulate(machPtr, interp, singleStep)
                                                                * The index of the table is the lower 
                                                                * 2 bits of the program counter.
                                                                */
-                    int index = machPtr->regs[PC_REG] & 0b11; // mask out everything except lower 2 bits
+                    int index = (machPtr->regs[PC_REG]>>2) & 0x2; // mask out everything except middle 
                     if (branchTaken == 1)
                     {
                         switch(bt_table[index])
