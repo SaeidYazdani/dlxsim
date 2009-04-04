@@ -2134,11 +2134,11 @@ Simulate(machPtr, interp, singleStep)
             #define UNSURE_BRANCH_NOT_TAKEN 2
             #define SURE_BRANCH_NOT_TAKEN 3
 			
-			struct BTBEntry {
+			typedef struct {
 				int tag;
 				int target;
 				int status;
-			};
+			} BTBEntry;
 			
 			/* 
 			* SURE_BRANCH_TAKEN -> take branch (sure)
@@ -2149,7 +2149,7 @@ Simulate(machPtr, interp, singleStep)
 			* The index of the table is the lower 
 			* 2 bits of the program counter.
 			*/
-            static struct BTBEntry bt_table[(1 << BITS_IN_BTB_INDEX)] = (BTBEntry){-1, 0, 0}; 
+            static BTBEntry bt_table[(1 << BITS_IN_BTB_INDEX)] = (BTBEntry){-1, 0, 0}; 
 			
             int index = (machPtr->regs[PC_REG] >> 2) & ((1 << BITS_IN_BTB_INDEX) - 1);
             
@@ -2185,18 +2185,18 @@ Simulate(machPtr, interp, singleStep)
 				//Branch was taken
 				if (branchTaken == 1)
 		        {
-		            switch(bt_table[index])
+		            switch(bt_table[index].status)
 		            {
 		                case SURE_BRANCH_TAKEN: //Assumed
 		                    break;
 		                case UNSURE_BRANCH_TAKEN:
-		                    bt_table[index] = SURE_BRANCH_TAKEN; //Assured
+		                    bt_table[index].status = SURE_BRANCH_TAKEN; //Assured
 		                    break;                        
 		                case UNSURE_BRANCH_NOT_TAKEN:
-		                    bt_table[index] = SURE_BRANCH_TAKEN;  //2 in a row -> switch
+		                    bt_table[index].status = SURE_BRANCH_TAKEN;  //2 in a row -> switch
 		                    break;                        
 		                case SURE_BRANCH_NOT_TAKEN:
-		                    bt_table[index] = UNSURE_BRANCH_TAKEN; //Anomaly
+		                    bt_table[index].status = UNSURE_BRANCH_TAKEN; //Anomaly
 		                    break;                        
 		                default:
 		                    sprintf(interp->result, "internal error: something wrong happened in dyanmic branch prediction. Blame Deva. \
@@ -2206,16 +2206,16 @@ Simulate(machPtr, interp, singleStep)
 				//Branch was not taken
 		        else
 		        {
-		            switch(bt_table[index])
+		            switch(bt_table[index].status)
 		            {
 		                case SURE_BRANCH_TAKEN:
-		                    bt_table[index] = UNSURE_BRANCH_TAKEN; //Anomaly
+		                    bt_table[index].status = UNSURE_BRANCH_TAKEN; //Anomaly
 		                    break;
 		                case UNSURE_BRANCH_TAKEN:
-		                    bt_table[index] = SURE_BRANCH_NOT_TAKEN; //2 in a row -> switch
+		                    bt_table[index].status = SURE_BRANCH_NOT_TAKEN; //2 in a row -> switch
 		                    break;                        
 		                case UNSURE_BRANCH_NOT_TAKEN:
-		                    bt_table[index] = SURE_BRANCH_NOT_TAKEN; //Assured
+		                    bt_table[index].status = SURE_BRANCH_NOT_TAKEN; //Assured
 		                    break;                        
 		                case SURE_BRANCH_NOT_TAKEN: //Assumed
 		                    break;
