@@ -299,6 +299,7 @@ statsReset(machPtr)
 {
     int i;
 
+    machPtr->branchStalls = 0;
     machPtr->loadStalls = 0;
     machPtr->FPstalls = 0;
     machPtr->branchYes = 0;
