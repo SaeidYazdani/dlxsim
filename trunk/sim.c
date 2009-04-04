@@ -298,8 +298,6 @@ statsReset(machPtr)
      DLX *machPtr;                   /* machine description */
 {
     int i;
-	
-	printf("RESETTING THE FUCKING STATS OMG\n");
 
     machPtr->branchStalls = 0;
     machPtr->loadStalls = 0;
@@ -2107,7 +2105,7 @@ Simulate(machPtr, interp, singleStep)
 	machPtr->cycleCount++;
 	
 	//The instruction that was executed was a branch
-	if(branchInstr == 1)
+	if(branchInstr == 1 && g_handleBranch != BRANCH_DELAY)
 	{
 		//Flushing the pipeline adds 1 stall cycles
 		if(g_handleBranch == BRANCH_FLUSH)
