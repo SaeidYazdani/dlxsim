@@ -450,7 +450,7 @@ Sim_DumpStats(machPtr, interp, argc, argv)
 	printf("\nTotal floating point operations = %d\n", floatCount);
 	printf("Total operations = %d\n", intCount + floatCount);
 	printf("Total cycles = %d\n", intCount + floatCount + 
-	       machPtr->loadStalls + machPtr->FPstalls);
+	       machPtr->loadStalls + machPtr->FPstalls + machPtr->branchStalls);
 	interp->result[0] = '\0';
     }
 
