@@ -298,6 +298,8 @@ statsReset(machPtr)
      DLX *machPtr;                   /* machine description */
 {
     int i;
+	
+	printf("RESETTING THE FUCKING STATS OMG\n");
 
     machPtr->branchStalls = 0;
     machPtr->loadStalls = 0;
