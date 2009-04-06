@@ -2123,6 +2123,15 @@ Simulate(machPtr, interp, singleStep)
 				machPtr->cycleCount += 1;
 				machPtr->branchStalls += 1;
 			}
+			else
+			{
+				MemWord wPtr = &machPtr->memPtr[pc];
+				if(wPtr->opcode != OP_NOP)
+				{
+					printf("F");
+					Exit(0);
+				}
+			}
 		}
 		//Ideal branch handling adds 0 stall cycles
 		else if(g_handleBranch == BRANCH_IDEAL)
