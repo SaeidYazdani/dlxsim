@@ -2126,7 +2126,7 @@ Simulate(machPtr, interp, singleStep)
 			else
 			{
 				MemWord *wPtr = &machPtr->memPtr[pc];
-				if(wPtr->opcode != OP_NOP)
+				if(wPtr->opCode != OP_NOP)
 				{
 					printf("F");
 					Exit(0);
