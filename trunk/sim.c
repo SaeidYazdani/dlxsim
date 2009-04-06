@@ -2129,7 +2129,6 @@ Simulate(machPtr, interp, singleStep)
 				if(wPtr->opCode != OP_NOP)
 				{
 					printf("F");
-					Exit(0);
 				}
 			}
 		}
