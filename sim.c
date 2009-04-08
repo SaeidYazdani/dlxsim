@@ -1102,6 +1102,8 @@ Simulate(machPtr, interp, singleStep)
 	      break;
 
 	    case OP_JAL:
+		branchInstr = 1;
+		branchTaken = 1;
 		machPtr->regs[R31] =
 			INDEX_TO_ADDR(machPtr->regs[NEXT_PC_REG] + 1);
 	    case OP_J:
@@ -1111,6 +1113,8 @@ Simulate(machPtr, interp, singleStep)
 		break;
 
 	    case OP_JALR:
+		branchInstr = 1;
+		branchTaken = 1;
 		machPtr->regs[R31] =
 			INDEX_TO_ADDR(machPtr->regs[NEXT_PC_REG] + 1);
 	    case OP_JR:
