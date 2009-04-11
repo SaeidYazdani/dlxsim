@@ -2156,7 +2156,7 @@ Simulate(machPtr, interp, singleStep)
 			* The index of the table is the lower 
 			* 2 bits of the program counter.
 			*/
-            static BTBEntry bt_table[(1 << BITS_IN_BTB_INDEX)] = {{-1}, {0}, {0}}; 
+            static BTBEntry bt_table[(1 << BITS_IN_BTB_INDEX)] = {{-1,0,0}}; 
 			
             int index = (machPtr->regs[PC_REG] >> 2) & ((1 << BITS_IN_BTB_INDEX) - 1);
             
