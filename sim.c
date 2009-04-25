@@ -27,7 +27,7 @@ static char rcsid[] = "$Header: /user1/ouster/mipsim/RCS/sim.c,v 1.18 89/11/20 1
 #include "asm.h"
 #include "dlx.h"
 #include "sym.h"
-#include "btb.h"
+#include "branch.h"
 
 extern int g_handleBranch;
 
@@ -2113,126 +2113,10 @@ Simulate(machPtr, interp, singleStep)
 	//The instruction that was executed was a branch
 	if(branchInstr == 1 && g_handleBranch != BRANCH_DELAY)
 	{
-		//Flushing the pipeline adds 1 stall cycles
-		if(g_handleBranch == BRANCH_FLUSH)
-		{
-			machPtr->cycleCount += 1;
-			machPtr->branchStalls += 1;
-		}
-		//Predicting not taken adds 1 stall cycles if taken, and 0 if not taken
-		else if(g_handleBranch == BRANCH_NOTTAKEN)
-		{
-			if(branchTaken == 1)
-			{
-				machPtr->cycleCount += 1;
-				machPtr->branchStalls += 1;
-			}
-		}
-		//Ideal branch handling adds 0 stall cycles
-		else if(g_handleBranch == BRANCH_IDEAL)
-		{
-			//do nothing
-		}
-		//BTB dynamic prediction
-		else
-		{
-            #define SURE_BRANCH_TAKEN 0
-            #define UNSURE_BRANCH_TAKEN 1
-            #define UNSURE_BRANCH_NOT_TAKEN 2
-            #define SURE_BRANCH_NOT_TAKEN 3
-			
-			typedef struct {
-				int tag;
-				int target;
-				int status;
-			} BTBEntry;
-			
-			/* 
-			* SURE_BRANCH_TAKEN -> take branch (sure)
-			* UNSURE_BRANCH_TAKEN -> take branch (unsure)
-			* UNSURE_BRANCH_NOT_TAKEN -> do not take branch (unsure)
-			* SURE_BRANCH_NOT_TAKEN -> do no take branch (sure) [DEFAULT]
-			*
-			* The index of the table is the lower 
-			* 2 bits of the program counter.
-			*/
-            static BTBEntry bt_table[(1 << BITS_IN_BTB_INDEX)] = {{-1,0, SURE_BRANCH_NOT_TAKEN}}; 
-			
-            int index = (machPtr->regs[PC_REG] >> 2) & ((1 << BITS_IN_BTB_INDEX) - 1);
-            
-			//Not in the BTB (Or different tag for given index), so insert new entry
-			if(bt_table[index].tag == -1 || bt_table[index].tag != (machPtr->regs[PC_REG] >> (BITS_IN_BTB_INDEX + 2)))
-			{
-				bt_table[index].tag = (machPtr->regs[PC_REG] >> (BITS_IN_BTB_INDEX + 2));
-				bt_table[index].target = pc;
-				
-				//Was taken, so need to stall 1 cycle and set prediction to unsure taken
-				if(branchTaken == 1)
-				{
-					machPtr->cycleCount += 1;
-					machPtr->branchStalls += 1;
-					bt_table[index].status = UNSURE_BRANCH_TAKEN;
-				}
-				//Was not taken, so need to set prediction to unsure not taken
-				else
-				{
-					bt_table[index].status = UNSURE_BRANCH_NOT_TAKEN;
-				}
-			}
-			else
-			{
-				//The predicted and resolved targets are not the same, needs stall and predicted target update
-				if(bt_table[index].target != pc)
-				{
-					machPtr->cycleCount += 1;
-					machPtr->branchStalls += 1;
-					bt_table[index].target = pc;
-				}
-				
-				//Branch was taken
-				if (branchTaken == 1)
-		        {
-		            switch(bt_table[index].status)
-		            {
-		                case SURE_BRANCH_TAKEN: //Assumed
-		                    break;
-		                case UNSURE_BRANCH_TAKEN:
-		                    bt_table[index].status = SURE_BRANCH_TAKEN; //Assured
-		                    break;                        
-		                case UNSURE_BRANCH_NOT_TAKEN:
-		                    bt_table[index].status = SURE_BRANCH_TAKEN;  //2 in a row -> switch
-		                    break;                        
-		                case SURE_BRANCH_NOT_TAKEN:
-		                    bt_table[index].status = UNSURE_BRANCH_TAKEN; //Anomaly
-		                    break;                        
-		                default:
-		                    sprintf(interp->result, "internal error: something wrong happened in dyanmic branch prediction. Blame Deva. \
-		                            Debugging info:took branch, bad state = %d", bt_table[index]);
-		            }
-		        }
-				//Branch was not taken
-		        else
-		        {
-		            switch(bt_table[index].status)
-		            {
-		                case SURE_BRANCH_TAKEN:
-		                    bt_table[index].status = UNSURE_BRANCH_TAKEN; //Anomaly
-		                    break;
-		                case UNSURE_BRANCH_TAKEN:
-		                    bt_table[index].status = SURE_BRANCH_NOT_TAKEN; //2 in a row -> switch
-		                    break;                        
-		                case UNSURE_BRANCH_NOT_TAKEN:
-		                    bt_table[index].status = SURE_BRANCH_NOT_TAKEN; //Assured
-		                    break;                        
-		                case SURE_BRANCH_NOT_TAKEN: //Assumed
-		                    break;
-		                default:
-		                    sprintf(interp->result, "internal error: something wrong happened in dyanmic branch prediction. Blame Deva. \
-		                            Debugging info:didn't take branch, bad state = %d", bt_table[index]);
-		            }
-		        }  
-			}
-		}
+		int stall = calculateBrancStall(branchTaken);
+		
+		machPtr->branchStalls += stall;
+		machPtr->cycleCount += stall;
 	}
 			
 	if (machPtr->checkFP && machPtr->cycleCount >= machPtr->checkFP)
