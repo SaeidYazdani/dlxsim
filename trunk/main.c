@@ -35,6 +35,7 @@ static char rcsid[] = "$Header: /user1/ouster/mipsim/RCS/main.c,v 1.7 89/11/05 1
 #include <sys/stat.h>
 #include <tcl.h>
 #include "dlx.h"
+#include "branch.h"
 
 static Tcl_Interp *interp;
 static DLX *machPtr;
