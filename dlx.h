@@ -113,13 +113,6 @@ typedef struct FPop {
 				* means end of list. */
 } FPop;
 
-//Values used to set up the type of branch handling
-#define BRANCH_DELAY 0
-#define BRANCH_FLUSH 1
-#define BRANCH_NOTTAKEN 2
-#define BRANCH_BTB 3
-#define BRANCH_IDEAL 4
-
 /*
  * The structure below describes the state of an DLX machine.
  */
