@@ -1,6 +1,9 @@
 #include "branch.h"
+#include "dlx.h"
 
-int calculateBranchStall(int taken)
+extern int g_handleBranch;
+
+int calculateBranchStall(int branchTaken, unsigned int addr, unsigned int target)
 {
 	int stall = 0;
 	
@@ -26,13 +29,13 @@ int calculateBranchStall(int taken)
 	{
         static BTBEntry bt_table[(1 << BITS_IN_BTB_INDEX)] = {{-1}, {0}, {0}}; 
 		
-        int index = (machPtr->regs[PC_REG] >> 2) & ((1 << BITS_IN_BTB_INDEX) - 1);
+        int index = (addr >> 2) & ((1 << BITS_IN_BTB_INDEX) - 1);
         
 		//Not in the BTB (Or different tag for given index), so insert new entry
-		if(bt_table[index].tag == -1 || bt_table[index].tag != (machPtr->regs[PC_REG] >> (BITS_IN_BTB_INDEX + 2)))
+		if(bt_table[index].tag == -1 || bt_table[index].tag != (addr >> (BITS_IN_BTB_INDEX + 2)))
 		{
-			bt_table[index].tag = (machPtr->regs[PC_REG] >> (BITS_IN_BTB_INDEX + 2));
-			bt_table[index].target = pc;
+			bt_table[index].tag = (addr >> (BITS_IN_BTB_INDEX + 2));
+			bt_table[index].target = target;
 			
 			//Was taken, so need to stall 1 cycle and set prediction to unsure taken
 			if(branchTaken == 1)
@@ -49,10 +52,10 @@ int calculateBranchStall(int taken)
 		else
 		{
 			//The predicted and resolved targets are not the same, needs stall and predicted target update
-			if(bt_table[index].target != pc)
+			if(bt_table[index].target != target)
 			{
 				stall = 1;
-				bt_table[index].target = pc;
+				bt_table[index].target = target;
 			}
 			
 			//Branch was taken

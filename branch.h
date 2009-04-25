@@ -14,6 +14,6 @@ typedef struct {
 	int status;
 } BTBEntry;
 
-int calculateBranchStall(int taken);
+int calculateBranchStall(int branchTaken, unsigned int addr, unsigned int target);
 
 #endif
