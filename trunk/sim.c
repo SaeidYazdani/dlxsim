@@ -2113,7 +2113,7 @@ Simulate(machPtr, interp, singleStep)
 	//The instruction that was executed was a branch
 	if(branchInstr == 1 && g_handleBranch != BRANCH_DELAY)
 	{
-		int stall = calculateBrancStall(branchTaken);
+		int stall = calculateBranchStall(branchTaken);
 		
 		machPtr->branchStalls += stall;
 		machPtr->cycleCount += stall;
