@@ -2110,10 +2110,10 @@ Simulate(machPtr, interp, singleStep)
 	
 	machPtr->cycleCount++;
 	
-	//The instruction that was executed was a branch
+	//The instruction that was executed was a branch & no delay slot
 	if(branchInstr == 1 && g_handleBranch != BRANCH_DELAY)
 	{
-		int stall = calculateBranchStall(branchTaken);
+		int stall = calculateBranchStall(branchTaken, machPtr->regs[PC_REG], pc);
 		
 		machPtr->branchStalls += stall;
 		machPtr->cycleCount += stall;
