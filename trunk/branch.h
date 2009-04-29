@@ -20,6 +20,9 @@ typedef struct {
 	int status;
 } BTBEntry;
 
+static BTBEntry bt_table[(1 << BITS_IN_BTB_INDEX)];
+
+void initBTBTable();
 int calculateBranchStall(int branchTaken, unsigned int addr, unsigned int target);
 
 #endif

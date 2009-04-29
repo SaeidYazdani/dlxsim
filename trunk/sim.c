@@ -245,6 +245,8 @@ Sim_Create(memSize, interp, au, al, mu, ml, du, dl)
     machPtr->FPopsList = NULL;
     machPtr->checkFP = 0;
     machPtr->refTraceFile = NULL;
+	
+	initBTBTable();
 
 /* initialize counters */
     statsReset(machPtr);
