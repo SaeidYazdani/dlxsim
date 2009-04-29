@@ -2,18 +2,21 @@
 
 extern int g_handleBranch;
 
+//Initializing the BTB table used for -dyn-branch-pred
 void initBTBTable()
 {
+	//Sets all bytes of the table to 0xFF, making all the tags -1 (Meaning invalid)
 	memset(bt_table, 0xFF, (1 << BITS_IN_BTB_INDEX)*sizeof(BTBEntry));
 }
 
+//Calculating if the branch required a stall or not
 int calculateBranchStall(int branchTaken, unsigned int addr, unsigned int target)
 {
 	int stall = 0;
 	
 	if(g_handleBranch == BRANCH_FLUSH)
 	{
-		stall = 1;
+		stall = 1;cd tests
 	}
 	//Predicting not taken adds 1 stall cycles if taken, and 0 if not taken
 	else if(g_handleBranch == BRANCH_NOTTAKEN)
@@ -32,13 +35,6 @@ int calculateBranchStall(int branchTaken, unsigned int addr, unsigned int target
 	else
 	{		
         int index = (addr >> 2) & ((1 << BITS_IN_BTB_INDEX) - 1);
-		
-		for(index = 0; index < (1 << BITS_IN_BTB_INDEX); index++)
-		{
-			printf("%d | ", bt_table[index].tag);
-		}
-		
-		while(1) { }
         
 		//Not in the BTB (Or different tag for given index), so insert new entry
 		if(bt_table[index].tag == -1 || bt_table[index].tag != (addr >> (BITS_IN_BTB_INDEX + 2)))
