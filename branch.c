@@ -26,11 +26,16 @@ int calculateBranchStall(int branchTaken, unsigned int addr, unsigned int target
 	//BTB dynamic prediction
 	else
 	{
-        static BTBEntry bt_table[(1 << BITS_IN_BTB_INDEX)] = {{-1, 0, 0}}; 
+        static BTBEntry bt_table[(1 << BITS_IN_BTB_INDEX)] = {{-1, 0, 0}}; 		
 		
         int index = (addr >> 2) & ((1 << BITS_IN_BTB_INDEX) - 1);
 		
-		printf("[%d %d]", bt_table[0].tag, bt_table[255].tag);
+		for(index = 0; index < (1 << BITS_IN_BTB_INDEX); index++)
+		{
+			printf("%d | ", bt_table[index].tag);
+		}
+		
+		while(1) { }
         
 		//Not in the BTB (Or different tag for given index), so insert new entry
 		if(bt_table[index].tag == -1 || bt_table[index].tag != (addr >> (BITS_IN_BTB_INDEX + 2)))
