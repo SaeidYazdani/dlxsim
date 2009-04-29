@@ -2,6 +2,11 @@
 
 extern int g_handleBranch;
 
+void initBTBTable()
+{
+	memset(bt_table, 0xFF, (1 << BITS_IN_BTB_INDEX)*sizeof(BTBEntry));
+}
+
 int calculateBranchStall(int branchTaken, unsigned int addr, unsigned int target)
 {
 	int stall = 0;
@@ -25,9 +30,7 @@ int calculateBranchStall(int branchTaken, unsigned int addr, unsigned int target
 	}
 	//BTB dynamic prediction
 	else
-	{
-        static BTBEntry bt_table[(1 << BITS_IN_BTB_INDEX)] = {{-1, 0, 0}}; 		
-		
+	{		
         int index = (addr >> 2) & ((1 << BITS_IN_BTB_INDEX) - 1);
 		
 		for(index = 0; index < (1 << BITS_IN_BTB_INDEX); index++)
