@@ -16,7 +16,7 @@ int calculateBranchStall(int branchTaken, unsigned int addr, unsigned int target
 	
 	if(g_handleBranch == BRANCH_FLUSH)
 	{
-		stall = 1;cd tests
+		stall = 1;
 	}
 	//Predicting not taken adds 1 stall cycles if taken, and 0 if not taken
 	else if(g_handleBranch == BRANCH_NOTTAKEN)
